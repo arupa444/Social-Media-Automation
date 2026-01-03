@@ -1,7 +1,7 @@
 import os
 import requests
 import urllib.parse
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 
@@ -78,4 +78,142 @@ def callback(code: str = None, error: str = None):
         "access_token": access_token,
         "expires_in_seconds": expires_in,
         "message": "Copy the access_token. You will need it for the next step!"
+    }
+
+
+@app.get("/get_user_info")
+def get_user_info(access_token: str):
+    """
+    Step 3 (FIXED): Use the 'userinfo' endpoint which works with 'openid' scope.
+    """
+    # CORRECT endpoint for openid/profile scopes
+    api_url = "https://api.linkedin.com/v2/userinfo"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.get(api_url, headers=headers)
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail=response.json())
+
+    user_data = response.json()
+
+    # In the OIDC standard, 'sub' (Subject) is your unique Member ID
+    user_id = user_data.get("sub")
+
+    # Construct the full URN format required for posting
+    author_urn = f"urn:li:person:{user_id}"
+
+    return {
+        "status": "Success",
+        "user_id": user_id,
+        "author_urn": author_urn,  # <--- SAVE THIS!
+        "full_name": user_data.get("name"),
+        "email": user_data.get("email"),
+        "raw_response": user_data  # Showing full data just in case
+    }
+
+
+@app.post("/post_image")
+async def post_image(
+        access_token: str = Form(...),
+        author_urn: str = Form(...),
+        caption: str = Form(...),
+        file: UploadFile = File(...)
+):
+    """
+    Automates the 3-step flow to post an Image to LinkedIn.
+    """
+
+    # --- STEP 1: Register the Upload ---
+    register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
+
+    register_json = {
+        "registerUploadRequest": {
+            "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+            "owner": author_urn,
+            "serviceRelationships": [
+                {
+                    "relationshipType": "OWNER",
+                    "identifier": "urn:li:userGeneratedContent"
+                }
+            ]
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    reg_response = requests.post(register_url, headers=headers, json=register_json)
+
+    if reg_response.status_code != 200:
+        return {"error": "Step 1 Failed (Register)", "details": reg_response.json()}
+
+    reg_data = reg_response.json()
+
+    # Extract the upload URL and the Asset ID (URN)
+    upload_url = reg_data['value']['uploadMechanism']['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'][
+        'uploadUrl']
+    asset_urn = reg_data['value']['asset']
+
+    print(f"Step 1 Success. Asset URN: {asset_urn}")
+
+    # --- STEP 2: Upload the Binary Image Data ---
+    # We read the file bytes from the FastAPI upload
+    file_content = await file.read()
+
+    # Note: We do NOT send the Authorization header here.
+    # The upload_url already contains a secure token.
+    upload_response = requests.put(upload_url, data=file_content)
+
+    if upload_response.status_code not in [200, 201]:
+        return {"error": "Step 2 Failed (Upload)", "details": upload_response.text}
+
+    print("Step 2 Success. Image uploaded.")
+
+    # --- STEP 3: Create the UGC Post ---
+    post_url = "https://api.linkedin.com/v2/ugcPosts"
+
+    post_json = {
+        "author": author_urn,
+        "lifecycleState": "PUBLISHED",
+        "specificContent": {
+            "com.linkedin.ugc.ShareContent": {
+                "shareCommentary": {
+                    "text": caption
+                },
+                "shareMediaCategory": "IMAGE",
+                "media": [
+                    {
+                        "status": "READY",
+                        "description": {
+                            "text": "Image uploaded via API"
+                        },
+                        "media": asset_urn,
+                        "title": {
+                            "text": "My Automated Post"
+                        }
+                    }
+                ]
+            }
+        },
+        "visibility": {
+            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+        }
+    }
+
+    final_response = requests.post(post_url, headers=headers, json=post_json)
+
+    if final_response.status_code != 201:
+        return {"error": "Step 3 Failed (Creation)", "details": final_response.json()}
+
+    return {
+        "status": "Post Published Successfully!",
+        "post_id": final_response.json().get("id"),
+        "link": f"https://www.linkedin.com/feed/update/{final_response.json().get('id')}"
     }
