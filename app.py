@@ -4,10 +4,14 @@ import urllib.parse
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
-
+import google.generativeai as genai
+from PIL import Image
 # Load environment variables
 load_dotenv()
 
+GENAI_KEY = os.getenv("GEMINI_API_KEY")
+if GENAI_KEY:
+    genai.configure(api_key=GENAI_KEY)
 
 
 CLIENT_ID = os.getenv("LINKEDIN_CLIENT_ID")
@@ -119,12 +123,24 @@ def get_user_info(access_token: str):
     }
 
 
+@app.post("/genrateImage")
+async def genrateImage(prompt: str = Form(...)):
+
+    model = genai.GenerativeModel('gemini-2.5-flash-image')
+    response = model.generate_content(prompt)
+    for part in response.parts:
+        if part.inline_data:
+            image = part.as_image()
+            image.show()
+
+
+
 @app.post("/post_image")
 async def post_image(
         access_token: str = Form(...),
         author_urn: str = Form(...),
-        caption: str = Form(...),
-        file: UploadFile = File(...)
+        # caption: str = Form(...),
+        # file: UploadFile = File(...)
 ):
     """
     Automates the 3-step flow to post an Image to LinkedIn.
