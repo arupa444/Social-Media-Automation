@@ -1,7 +1,7 @@
 import os
 import requests
 import urllib.parse
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Response
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -25,6 +25,7 @@ app = FastAPI()
 # 'w_member_social' -> CRITICAL: This allows posting
 SCOPES = "openid profile email w_member_social"
 
+os.makedirs("images", exist_ok=True)
 
 @app.get("/")
 def read_root():
@@ -123,24 +124,49 @@ def get_user_info(access_token: str):
     }
 
 
-@app.post("/genrateImage")
-async def genrateImage(prompt: str = Form(...)):
 
-    model = genai.GenerativeModel('gemini-2.5-flash-image')
-    response = model.generate_content(prompt)
-    for part in response.parts:
-        if part.inline_data:
-            image = part.as_image()
-            image.show()
 
+@app.post("/generate-image")
+async def generate_image(prompt: str = Form(...)):
+    try:
+        # 1. Initialize the model
+        model = genai.GenerativeModel('gemini-2.5-flash-image')
+
+        # 2. Generate content
+        response = model.generate_content(prompt)
+
+        if response.parts:
+            for part in response.parts:
+                if part.inline_data:
+                    # Extract raw image bytes and mime type
+                    image_data = part.inline_data.data
+                    mime_type = part.inline_data.mime_type or "image/jpeg"
+
+                    # 3. Determine file extension and unique name
+                    ext = "png" if "png" in mime_type else "jpg"
+                    filename = f"images/img_{uuid.uuid4()}.{ext}"
+
+                    # 4. Save to local disk
+                    with open(filename, "wb") as f:
+                        f.write(image_data)
+                    print(f"Image saved locally to: {filename}")
+
+                    # 5. Return image to the browser
+                    return Response(content=image_data, media_type=mime_type)
+
+        raise HTTPException(status_code=500, detail="No image data found in response.")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/post_image")
 async def post_image(
         access_token: str = Form(...),
         author_urn: str = Form(...),
-        # caption: str = Form(...),
-        # file: UploadFile = File(...)
+        caption: str = Form(...),
+        file: UploadFile = File(...)
 ):
     """
     Automates the 3-step flow to post an Image to LinkedIn.
