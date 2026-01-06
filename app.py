@@ -132,10 +132,8 @@ async def generate_image(prompt: str = Form(...)):
     try:
         # 1. Initialize the model
         model = genai.GenerativeModel('gemini-2.5-flash-image')
-
         # 2. Generate content
         response = model.generate_content(prompt)
-
         if response.parts:
             for part in response.parts:
                 if part.inline_data:
