@@ -131,9 +131,10 @@ def get_user_info(access_token: str):
 async def generate_image(prompt: str = Form(...)):
     try:
         # 1. Initialize the model
-        model = genai.GenerativeModel('gemini-2.5-flash-image')
+        model = genai.GenerativeModel('gemini-2.0-flash-image-generation')
         # 2. Generate content
         response = model.generate_content(prompt)
+        print(response)
         if response.parts:
             for part in response.parts:
                 if part.inline_data:
