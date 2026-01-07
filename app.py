@@ -128,12 +128,12 @@ def get_user_info(access_token: str):
 
 @app.post("/generate-image")
 async def generate_image(prompt: str = Form(...)):
+
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash-image",
             contents=[prompt],
         )
-
         for part in response.parts:
             if part.text is not None:
                 print(part.text)
@@ -142,8 +142,6 @@ async def generate_image(prompt: str = Form(...)):
                 image = part.as_image()
                 image.save(imageName)
                 print("Image saved : ",imageName)
-
-
         return response
 
     except Exception as e:
