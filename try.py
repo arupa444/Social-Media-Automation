@@ -1,28 +1,36 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types  # Import types to access HttpOptions
 from PIL import Image
 from io import BytesIO
-from dotenv import load_dotenv
-import os
 import base64
+import os
+from dotenv import load_dotenv
 
-# Load .env variables
 load_dotenv()
 
-GENAI_KEY = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=GENAI_KEY)
-
-# Create model
-model = genai.GenerativeModel("gemini-2.0-flash-image-generation")
-
-# Generate image
-response = model.generate_content(
-    "Create a picture of a futuristic banana with neon lights in a cyberpunk city."
+# Initialize Client with HttpOptions for timeout
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY"),
+    http_options=types.HttpOptions(timeout=120000)  # Timeout in milliseconds (120s = 120,000ms)
 )
 
-# Extract & display image
-for candidate in response.candidates:
-    for part in candidate.content.parts:
-        if part.inline_data and part.inline_data.mime_type.startswith("image/"):
-            image_bytes = base64.b64decode(part.inline_data.data)
-            image = Image.open(BytesIO(image_bytes))
-            image.show()
+prompt = "A simple illustration of a small robot sitting on a desk"
+
+try:
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-image-generation", # Ensure this model ID is correct/available to you
+        contents=prompt
+    )
+
+    if response.candidates and response.candidates[0].content.parts:
+        for part in response.candidates[0].content.parts:
+            if part.inline_data:
+                img_bytes = base64.b64decode(part.inline_data.data)
+                img = Image.open(BytesIO(img_bytes)).convert("RGB")
+                img.save("nano_banana.png")
+                print("Image saved successfully as nano_banana.png")
+    else:
+        print("No content generated.")
+
+except Exception as e:
+    print(f"An error occurred: {e}")
