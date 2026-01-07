@@ -212,22 +212,18 @@ async def recentAINews():
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents="""
-                Provide the top 5 most important AI-related news items from the past 7 days.
-        
-                Focus on:
-                - Major AI model releases or updates
-                - Breakthrough research or benchmarks
-                - Big tech or startup announcements
-                - Government or policy decisions affecting AI
-                - Notable funding, acquisitions, or partnerships
-        
-                For each news item, include:
-                - A short headline
-                - 2–3 sentence summary
-                - Company or organization involved
-                - Date of announcement
-        
-                Keep the response concise, factual, and up-to-date.
+            Create a LinkedIn-ready post summarizing the top AI news from the past 7 days.
+
+            Requirements:
+            - Start with a strong hook (1–2 lines)
+            - Include 4–5 bullet points, each covering one major AI news item
+            - Each bullet point should be concise (1–2 lines)
+            - Use clear, professional language (not casual, not academic)
+            - Add relevant emojis sparingly (🚀 🤖 📢)
+            - End with 2–3 relevant hashtags (e.g., #AI #MachineLearning #TechNews)
+
+            Do NOT include sources, links, or explanations.
+            The output should be ready to post directly on LinkedIn.
             """,
             config=config
         )
