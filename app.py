@@ -237,7 +237,7 @@ async def recentAINews():
             ,
             config=config
         )
-        return response.text
+        return response.text.replace("\\n", "\n").replace("**", "").strip()
     except Exception as e:
         print(f"Error: {e}")
 
