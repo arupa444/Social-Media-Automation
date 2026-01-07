@@ -45,6 +45,11 @@ def normalize_for_linkedin(text: str) -> str:
     # Remove escaped bullets if any
     text = text.replace("\\n•", "\n•")
 
+    text = text.replace("\\t", "\t")
+
+    # Remove escaped bullets if any
+    text = text.replace("\\t•", "\t•")
+
     return text
 
 
@@ -405,6 +410,9 @@ async def post_image_with_information(
     """
     Automates the 3-step flow to post an Image to LinkedIn.
     """
+    caption = normalize_for_linkedin(caption)
+    # caption = "This past week in AI was defined by significant strides in responsible AI deployment and foundational model evolution.\n\n• OpenAI addressed safety concerns with a major update to its moderation API, enhancing its ability to detect harmful content.\n• Google unveiled Gemini 1.5 Flash, a lighter, faster version of its multimodal model, signaling a push for broader accessibility and efficiency.\n• Anthropic released updates to its Claude 3 family, further refining its AI's reasoning and safety capabilities.\n\nThese developments underscore a critical industry pivot towards making powerful AI more secure, efficient, and accessible for widespread adoption.\n\n#AI #ArtificialIntelligence #TechTrends"
+    # print(caption)
     # --- STEP 1: Register the Upload ---
     register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
 
