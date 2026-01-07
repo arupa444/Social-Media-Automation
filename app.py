@@ -126,7 +126,7 @@ def get_user_info(access_token: str):
 
 
 
-@app.post("/generate-image")
+@app.post("/generate-image-with-your-prompt")
 async def generate_image(prompt: str = Form(...)):
 
     try:
