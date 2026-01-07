@@ -283,6 +283,51 @@ async def recentAINews():
 
 
 
+@app.post("/recent-AI-News-image-promptGeneration")
+async def recentAIImagePromptGeneration(post: str = Form(...)):
+    try:
+        image_prompt_instruction = f"""
+        You are an expert creative director generating prompts for AI image generation.
+
+        Based on the following LinkedIn post content, create ONE concise, high-quality image generation prompt.
+
+        POST CONTENT:
+        {post}
+
+        IMAGE PROMPT RULES:
+        - Do NOT include text overlays, captions, or typography
+        - Visuals must be symbolic, not literal
+        - Focus on ONE dominant concept only
+        - Style must be professional, cinematic, and editorial
+        - Avoid faces unless absolutely necessary
+        - Suitable for a LinkedIn AI news post
+        - Aspect ratio: 1:1
+        - Ultra high detail, realistic lighting, clean composition
+
+        OUTPUT FORMAT:
+        Single paragraph image prompt only.
+        No explanations.
+        """
+        grounding_tool = types.Tool(
+            google_search=types.GoogleSearch()
+        )
+
+        config = types.GenerateContentConfig(
+            tools=[grounding_tool]
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=image_prompt_instruction,
+            config=config
+        )
+        post = normalize_for_linkedin(response.text)
+        return post
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+
 
 @app.post("/generate-image-with-enhanced-prompt")
 async def generate_image_enhanced(prompt: str = Form(...)):
@@ -350,17 +395,122 @@ async def generate_image_enhanced(prompt: str = Form(...)):
 
 
 
-@app.post("/post_image")
-async def post_image(
+@app.post("/post_image_with_information")
+async def post_image_with_information(
         access_token: str = Form(...),
         author_urn: str = Form(...),
-        # caption: str = Form(...),
+        caption: str = Form(...),
         file: UploadFile = File(...)
 ):
     """
     Automates the 3-step flow to post an Image to LinkedIn.
     """
-    caption = "AI continues its rapid evolution this week with groundbreaking developments impacting various sectors.\n\n• OpenAI has reportedly made significant progress on its next-generation AI model, rumored to be called GPT-5, with potential for more advanced reasoning and multimodal capabilities.\n• Google DeepMind unveiled a new AI system designed to predict protein structures with unprecedented accuracy, accelerating biological research and drug discovery.\n• The European Union is finalizing its AI Act, moving closer to establishing the first comprehensive legal framework for artificial intelligence, setting global standards for AI regulation.\n• Major tech companies are investing heavily in AI hardware, with increased demand for specialized chips driving innovation in AI accelerators and infrastructure.\n\nThese advancements underscore the accelerating pace of AI innovation and its growing influence across industries.\n\n#AI #ArtificialIntelligence #TechNews"
+    # --- STEP 1: Register the Upload ---
+    register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
+
+    register_json = {
+        "registerUploadRequest": {
+            "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+            "owner": author_urn,
+            "serviceRelationships": [
+                {
+                    "relationshipType": "OWNER",
+                    "identifier": "urn:li:userGeneratedContent"
+                }
+            ]
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    reg_response = requests.post(register_url, headers=headers, json=register_json)
+
+    if reg_response.status_code != 200:
+        return {"error": "Step 1 Failed (Register)", "details": reg_response.json()}
+
+    reg_data = reg_response.json()
+
+    # Extract the upload URL and the Asset ID (URN)
+    upload_url = reg_data['value']['uploadMechanism']['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'][
+        'uploadUrl']
+    asset_urn = reg_data['value']['asset']
+
+    print(f"Step 1 Success. Asset URN: {asset_urn}")
+
+    # --- STEP 2: Upload the Binary Image Data ---
+    # We read the file bytes from the FastAPI upload
+    file_content = await file.read()
+
+    # Note: We do NOT send the Authorization header here.
+    # The upload_url already contains a secure token.
+    upload_response = requests.put(upload_url, data=file_content)
+
+    if upload_response.status_code not in [200, 201]:
+        return {"error": "Step 2 Failed (Upload)", "details": upload_response.text}
+
+    print("Step 2 Success. Image uploaded.")
+
+    # --- STEP 3: Create the UGC Post ---
+    post_url = "https://api.linkedin.com/v2/ugcPosts"
+
+    post_json = {
+        "author": author_urn,
+        "lifecycleState": "PUBLISHED",
+        "specificContent": {
+            "com.linkedin.ugc.ShareContent": {
+                "shareCommentary": {
+                    "text": caption
+                },
+                "shareMediaCategory": "IMAGE",
+                "media": [
+                    {
+                        "status": "READY",
+                        "description": {
+                            "text": "Image uploaded via API"
+                        },
+                        "media": asset_urn,
+                        "title": {
+                            "text": "My Automated Post"
+                        }
+                    }
+                ]
+            }
+        },
+        "visibility": {
+            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+        }
+    }
+
+    final_response = requests.post(post_url, headers=headers, json=post_json)
+
+    if final_response.status_code != 201:
+        return {"error": "Step 3 Failed (Creation)", "details": final_response.json()}
+
+    return {
+        "status": "Post Published Successfully!",
+        "post_id": final_response.json().get("id"),
+        "link": f"https://www.linkedin.com/feed/update/{final_response.json().get('id')}"
+    }
+
+
+
+
+
+@app.post("/post_image_auto")
+async def post_image_auto(
+        access_token: str = Form(...),
+        author_urn: str = Form(...)
+):
+
+    caption = recentAINews()
+    imagePrompt = recentAIImagePromptGeneration(f"{caption}")
+    imageResponse = generate_image(f"{imagePrompt}")
+    """
+    Automates the 3-step flow to post an Image to LinkedIn.
+    """
     # --- STEP 1: Register the Upload ---
     register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
 
