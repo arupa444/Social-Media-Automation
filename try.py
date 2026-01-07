@@ -1,28 +1,25 @@
 import google.generativeai as genai
-from PIL import Image
-from io import BytesIO
 from dotenv import load_dotenv
 import os
+from PIL import Image
 import base64
+from io import BytesIO
 
-# Load .env variables
 load_dotenv()
 
-GENAI_KEY = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=GENAI_KEY)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Create model
-model = genai.GenerativeModel("gemini-2.0-flash-image-generation")
-
-# Generate image
-response = model.generate_content(
-    "Create a picture of a futuristic banana with neon lights in a cyberpunk city."
+model = genai.GenerativeModel(
+    model_name="gemini-2.0-flash-image-generation"
 )
 
-# Extract & display image
-for candidate in response.candidates:
-    for part in candidate.content.parts:
-        if part.inline_data and part.inline_data.mime_type.startswith("image/"):
-            image_bytes = base64.b64decode(part.inline_data.data)
-            image = Image.open(BytesIO(image_bytes))
-            image.show()
+prompt = "A futuristic humanoid robot teaching students in a classroom, ultra realistic"
+
+response = model.generate_content(prompt)
+
+# Extract image
+for part in response.candidates[0].content.parts:
+    if "inline_data" in part:
+        image_data = base64.b64decode(part.inline_data.data)
+        image = Image.open(BytesIO(image_data))
+        image.save("nano_banana_output.png")
