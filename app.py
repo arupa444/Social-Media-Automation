@@ -53,7 +53,14 @@ def normalize_for_linkedin(text: str) -> str:
     return text
 
 
+def contentGenarationThroughGemini(text: str) -> str:
 
+    response = client.models.generate_content(
+        model="gemini-2.5-flash-lite",
+        contents=text
+    )
+    print(response)
+    return response
 
 
 
@@ -227,11 +234,9 @@ async def enhancePrompt(prompt: str = Form(...)):
         A single, clean, detailed image-generation prompt suitable for a state-of-the-art image model.
         """
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=enhancedprompt
-        )
-        return response.text
+        response = contentGenarationThroughGemini(enhancedprompt)
+        print(response)
+        return response
     except Exception as e:
         print(f"Error: {e}")
 
