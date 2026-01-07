@@ -128,7 +128,9 @@ def get_user_info(access_token: str):
 
 @app.post("/generate-image")
 async def generate_image(prompt: str = Form(...)):
+
     try:
+
         response = client.models.generate_content(
             model="gemini-2.5-flash-image",
             contents=[prompt],
