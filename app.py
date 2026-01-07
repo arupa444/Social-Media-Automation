@@ -27,6 +27,38 @@ SCOPES = "openid profile email w_member_social"
 
 os.makedirs("images", exist_ok=True)
 
+
+
+
+
+
+def normalize_for_linkedin(text: str) -> str:
+    text = text.strip()
+
+    # Remove wrapping quotes
+    if text.startswith('"') and text.endswith('"'):
+        text = text[1:-1]
+
+    # Convert escaped newlines to real newlines
+    text = text.replace("\\n", "\n")
+
+    # Remove escaped bullets if any
+    text = text.replace("\\n•", "\n•")
+
+    return text
+
+
+
+
+
+
+
+
+
+
+
+
+
 @app.get("/")
 def read_root():
     return {"message": "LinkedIn Automator is running. Go to /login to authenticate."}
@@ -199,6 +231,103 @@ async def enhancePrompt(prompt: str = Form(...)):
         print(f"Error: {e}")
 
 
+@app.post("/recent-AI-News")
+async def recentAINews():
+    try:
+        grounding_tool = types.Tool(
+            google_search=types.GoogleSearch()
+        )
+
+        config = types.GenerateContentConfig(
+            tools=[grounding_tool]
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents="""
+            Write a LinkedIn-ready post highlighting the SINGLE MOST IMPORTANT AI developments from the past 7 days.
+
+            SELECTION CRITERIA (VERY IMPORTANT):
+            - Only include news that is high-impact, widely discussed, or likely to shape the future of AI
+            - Prefer breakthroughs, major model releases, regulatory shifts, or industry-defining moves
+            - If multiple stories are included, they must clearly outperform all others in importance
+            - Quality over quantity — skip minor updates, incremental features, or niche research
+
+            STRICT FORMATTING RULES:
+            - Use plain text only
+            - Do NOT use markdown (no **, no quotes, no bullets with *)
+            - Use real line breaks between paragraphs
+            - Use the bullet symbol "•" for bullet points
+            - Do NOT include \\n or escaped characters
+            - Do NOT wrap the post in quotes
+
+            STRUCTURE:
+            - Strong 1–2 line hook emphasizing “what mattered most this week”
+            - Blank line
+            - 3–4 bullet points covering only the best news (each max 2 lines)
+            - Blank line
+            - Short closing insight on why this week matters long-term
+            - Blank line
+            - 2–3 hashtags
+
+            Tone: professional, confident, signal-heavy (no hype).
+            Output must be directly postable on LinkedIn with no edits.
+            """
+            ,
+            config=config
+        )
+        post = normalize_for_linkedin(response.text)
+        return post
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+
+@app.post("/recent-AI-News-image-promptGeneration")
+async def recentAIImagePromptGeneration(post: str = Form(...)):
+    try:
+        image_prompt_instruction = f"""
+        You are an expert creative director generating prompts for AI image generation.
+
+        Based on the following LinkedIn post content, create ONE concise, high-quality image generation prompt.
+
+        POST CONTENT:
+        {post}
+
+        IMAGE PROMPT RULES:
+        - Do NOT include text overlays, captions, or typography
+        - Visuals must be symbolic, not literal
+        - Focus on ONE dominant concept only
+        - Style must be professional, cinematic, and editorial
+        - Avoid faces unless absolutely necessary
+        - Suitable for a LinkedIn AI news post
+        - Aspect ratio: 1:1
+        - Ultra high detail, realistic lighting, clean composition
+
+        OUTPUT FORMAT:
+        Single paragraph image prompt only.
+        No explanations.
+        """
+        grounding_tool = types.Tool(
+            google_search=types.GoogleSearch()
+        )
+
+        config = types.GenerateContentConfig(
+            tools=[grounding_tool]
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=image_prompt_instruction,
+            config=config
+        )
+        post = normalize_for_linkedin(response.text)
+        return post
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+
 
 @app.post("/generate-image-with-enhanced-prompt")
 async def generate_image_enhanced(prompt: str = Form(...)):
@@ -266,8 +395,8 @@ async def generate_image_enhanced(prompt: str = Form(...)):
 
 
 
-@app.post("/post_image")
-async def post_image(
+@app.post("/post_image_with_information")
+async def post_image_with_information(
         access_token: str = Form(...),
         author_urn: str = Form(...),
         caption: str = Form(...),
@@ -276,7 +405,6 @@ async def post_image(
     """
     Automates the 3-step flow to post an Image to LinkedIn.
     """
-
     # --- STEP 1: Register the Upload ---
     register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
 
