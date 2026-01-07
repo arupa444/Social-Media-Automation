@@ -1,27 +1,3 @@
-from google import genai
-from google.genai import types
-from PIL import Image
-from io import BytesIO
-import base64
-import os
-from dotenv import load_dotenv
+saveStr = r"AI continues its rapid evolution this week with groundbreaking developments impacting various sectors.\n\n• OpenAI has reportedly made significant progress on its next-generation AI model, rumored to be called GPT-5, with potential for more advanced reasoning and multimodal capabilities.\n• Google DeepMind unveiled a new AI system designed to predict protein structures with unprecedented accuracy, accelerating biological research and drug discovery.\n• The European Union is finalizing its AI Act, moving closer to establishing the first comprehensive legal framework for artificial intelligence, setting global standards for AI regulation.\n• Major tech companies are investing heavily in AI hardware, with increased demand for specialized chips driving innovation in AI accelerators and infrastructure.\n\nThese advancements underscore the accelerating pace of AI innovation and its growing influence across industries.\n\n#AI #ArtificialIntelligence #TechNews"
 
-load_dotenv()
-
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY"),
-    http_options=types.HttpOptions(timeout=30000)
-)
-
-prompt = ("rag agent")
-response = client.models.generate_content(
-    model="gemini-2.5-flash-image",
-    contents=[prompt],
-)
-
-for part in response.parts:
-    if part.text is not None:
-        print(part.text)
-    elif part.inline_data is not None:
-        image = part.as_image()
-        image.save("generated_image.png")
+print(f"{saveStr}")

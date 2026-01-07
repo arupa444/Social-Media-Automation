@@ -244,7 +244,13 @@ async def recentAINews():
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents="""
-            Write a LinkedIn-ready post summarizing the top AI news from the past 7 days.
+            Write a LinkedIn-ready post highlighting the SINGLE MOST IMPORTANT AI developments from the past 7 days.
+
+            SELECTION CRITERIA (VERY IMPORTANT):
+            - Only include news that is high-impact, widely discussed, or likely to shape the future of AI
+            - Prefer breakthroughs, major model releases, regulatory shifts, or industry-defining moves
+            - If multiple stories are included, they must clearly outperform all others in importance
+            - Quality over quantity — skip minor updates, incremental features, or niche research
 
             STRICT FORMATTING RULES:
             - Use plain text only
@@ -255,15 +261,15 @@ async def recentAINews():
             - Do NOT wrap the post in quotes
 
             STRUCTURE:
-            - Strong 1–2 line hook
+            - Strong 1–2 line hook emphasizing “what mattered most this week”
             - Blank line
-            - 4–5 bullet points (each max 2 lines)
+            - 3–4 bullet points covering only the best news (each max 2 lines)
             - Blank line
-            - Short closing insight
+            - Short closing insight on why this week matters long-term
             - Blank line
             - 2–3 hashtags
 
-            Tone: professional, confident, LinkedIn-appropriate.
+            Tone: professional, confident, signal-heavy (no hype).
             Output must be directly postable on LinkedIn with no edits.
             """
             ,
@@ -347,13 +353,13 @@ async def generate_image_enhanced(prompt: str = Form(...)):
 async def post_image(
         access_token: str = Form(...),
         author_urn: str = Form(...),
-        caption: str = Form(...),
+        # caption: str = Form(...),
         file: UploadFile = File(...)
 ):
     """
     Automates the 3-step flow to post an Image to LinkedIn.
     """
-
+    caption = "AI continues its rapid evolution this week with groundbreaking developments impacting various sectors.\n\n• OpenAI has reportedly made significant progress on its next-generation AI model, rumored to be called GPT-5, with potential for more advanced reasoning and multimodal capabilities.\n• Google DeepMind unveiled a new AI system designed to predict protein structures with unprecedented accuracy, accelerating biological research and drug discovery.\n• The European Union is finalizing its AI Act, moving closer to establishing the first comprehensive legal framework for artificial intelligence, setting global standards for AI regulation.\n• Major tech companies are investing heavily in AI hardware, with increased demand for specialized chips driving innovation in AI accelerators and infrastructure.\n\nThese advancements underscore the accelerating pace of AI innovation and its growing influence across industries.\n\n#AI #ArtificialIntelligence #TechNews"
     # --- STEP 1: Register the Upload ---
     register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
 
