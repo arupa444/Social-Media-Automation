@@ -1,10 +1,9 @@
 import os
 import uuid
-import base64
 import requests
 import urllib.parse
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Response
+from fastapi.responses import RedirectResponse, JSONResponse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -451,118 +450,6 @@ async def post_image_with_information(
 
     if upload_response.status_code not in [200, 201]:
         return {"error": "Step 2 Failed (Upload)", "details": upload_response.text}
-
-    print("Step 2 Success. Image uploaded.")
-
-    # --- STEP 3: Create the UGC Post ---
-    post_url = "https://api.linkedin.com/v2/ugcPosts"
-
-    post_json = {
-        "author": author_urn,
-        "lifecycleState": "PUBLISHED",
-        "specificContent": {
-            "com.linkedin.ugc.ShareContent": {
-                "shareCommentary": {
-                    "text": caption
-                },
-                "shareMediaCategory": "IMAGE",
-                "media": [
-                    {
-                        "status": "READY",
-                        "description": {
-                            "text": "Image uploaded via API"
-                        },
-                        "media": asset_urn,
-                        "title": {
-                            "text": "My Automated Post"
-                        }
-                    }
-                ]
-            }
-        },
-        "visibility": {
-            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-        }
-    }
-
-    final_response = requests.post(post_url, headers=headers, json=post_json)
-
-    if final_response.status_code != 201:
-        return {"error": "Step 3 Failed (Creation)", "details": final_response.json()}
-
-    return {
-        "status": "Post Published Successfully!",
-        "post_id": final_response.json().get("id"),
-        "link": f"https://www.linkedin.com/feed/update/{final_response.json().get('id')}"
-    }
-
-
-
-
-
-@app.post("/post_image_auto")
-async def post_image_auto(
-        access_token: str = Form(...),
-        author_urn: str = Form(...)
-):
-
-    caption = recentAINews()
-    imagePrompt = recentAIImagePromptGeneration(f"{caption}")
-    imageResponse = generate_image(f"{imagePrompt}")
-    """
-    Automates the 3-step flow to post an Image to LinkedIn.
-    """
-    # --- STEP 1: Register the Upload ---
-    register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
-
-    register_json = {
-        "registerUploadRequest": {
-            "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
-            "owner": author_urn,
-            "serviceRelationships": [
-                {
-                    "relationshipType": "OWNER",
-                    "identifier": "urn:li:userGeneratedContent"
-                }
-            ]
-        }
-    }
-
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-
-    reg_response = requests.post(register_url, headers=headers, json=register_json)
-
-    if reg_response.status_code != 200:
-        return {"error": "Step 1 Failed (Register)", "details": reg_response.json()}
-
-    reg_data = reg_response.json()
-
-    # Extract the upload URL and the Asset ID (URN)
-    upload_url = reg_data['value']['uploadMechanism']['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'][
-        'uploadUrl']
-    asset_urn = reg_data['value']['asset']
-
-    print(f"Step 1 Success. Asset URN: {asset_urn}")
-
-    # --- STEP 2: Upload the Binary Image Data ---
-    # We read the file bytes from the FastAPI upload
-    for part in imageResponse.parts:
-        if part.inline_data is not None:
-            # Decode base64 → raw image bytes
-            image_bytes = base64.b64decode(part.inline_data.data)
-
-            # Direct upload (S3 / GCS / presigned URL etc.)
-            upload_response = requests.put(
-                upload_url,
-                data=image_bytes,
-                headers={"Content-Type": "image/png"}
-            )
-
-            if upload_response.status_code not in [200, 201]:
-                return {"error": "Step 2 Failed (Upload)", "details": upload_response.text}
 
     print("Step 2 Success. Image uploaded.")
 
