@@ -212,19 +212,29 @@ async def recentAINews():
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents="""
-            Create a LinkedIn-ready post summarizing the top AI news from the past 7 days.
+            Write a LinkedIn-ready post summarizing the top AI news from the past 7 days.
 
-            Requirements:
-            - Start with a strong hook (1–2 lines)
-            - Include 4–5 bullet points, each covering one major AI news item
-            - Each bullet point should be concise (1–2 lines)
-            - Use clear, professional language (not casual, not academic)
-            - Add relevant emojis sparingly (🚀 🤖 📢)
-            - End with 2–3 relevant hashtags (e.g., #AI #MachineLearning #TechNews)
+            STRICT FORMATTING RULES:
+            - Use plain text only
+            - Do NOT use markdown (no **, no quotes, no bullets with *)
+            - Use real line breaks between paragraphs
+            - Use the bullet symbol "•" for bullet points
+            - Do NOT include \\n or escaped characters
+            - Do NOT wrap the post in quotes
 
-            Do NOT include sources, links, or explanations.
-            The output should be ready to post directly on LinkedIn.
-            """,
+            STRUCTURE:
+            - Strong 1–2 line hook
+            - Blank line
+            - 4–5 bullet points (each max 2 lines)
+            - Blank line
+            - Short closing insight
+            - Blank line
+            - 2–3 hashtags
+
+            Tone: professional, confident, LinkedIn-appropriate.
+            Output must be directly postable on LinkedIn with no edits.
+            """
+            ,
             config=config
         )
         return response.text
