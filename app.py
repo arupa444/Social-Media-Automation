@@ -1,9 +1,10 @@
 import os
 import uuid
+import base64
 import requests
 import urllib.parse
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Response
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -548,14 +549,20 @@ async def post_image_auto(
 
     # --- STEP 2: Upload the Binary Image Data ---
     # We read the file bytes from the FastAPI upload
-    file_content = await file.read()
+    for part in imageResponse.parts:
+        if part.inline_data is not None:
+            # Decode base64 → raw image bytes
+            image_bytes = base64.b64decode(part.inline_data.data)
 
-    # Note: We do NOT send the Authorization header here.
-    # The upload_url already contains a secure token.
-    upload_response = requests.put(upload_url, data=file_content)
+            # Direct upload (S3 / GCS / presigned URL etc.)
+            upload_response = requests.put(
+                upload_url,
+                data=image_bytes,
+                headers={"Content-Type": "image/png"}
+            )
 
-    if upload_response.status_code not in [200, 201]:
-        return {"error": "Step 2 Failed (Upload)", "details": upload_response.text}
+            if upload_response.status_code not in [200, 201]:
+                return {"error": "Step 2 Failed (Upload)", "details": upload_response.text}
 
     print("Step 2 Success. Image uploaded.")
 
