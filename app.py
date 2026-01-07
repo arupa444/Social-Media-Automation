@@ -199,6 +199,44 @@ async def enhancePrompt(prompt: str = Form(...)):
         print(f"Error: {e}")
 
 
+@app.post("/recent-AI-News")
+async def recentAINews():
+    try:
+        grounding_tool = types.Tool(
+            google_search=types.GoogleSearch()
+        )
+
+        config = types.GenerateContentConfig(
+            tools=[grounding_tool]
+        )
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents="""
+                Provide the top 5 most important AI-related news items from the past 7 days.
+        
+                Focus on:
+                - Major AI model releases or updates
+                - Breakthrough research or benchmarks
+                - Big tech or startup announcements
+                - Government or policy decisions affecting AI
+                - Notable funding, acquisitions, or partnerships
+        
+                For each news item, include:
+                - A short headline
+                - 2–3 sentence summary
+                - Company or organization involved
+                - Date of announcement
+        
+                Keep the response concise, factual, and up-to-date.
+            """,
+            config=config
+        )
+        return response.text
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+
 
 @app.post("/generate-image-with-enhanced-prompt")
 async def generate_image_enhanced(prompt: str = Form(...)):
