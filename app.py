@@ -5,16 +5,15 @@ import urllib.parse
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Response
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
-import google.generativeai as genai
-from PIL import Image
+from google import genai
+from google.genai import types
 # Load environment variables
 load_dotenv()
 
-GENAI_KEY = os.getenv("GEMINI_API_KEY")
-if GENAI_KEY:
-    genai.configure(api_key=GENAI_KEY)
-
-
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY"),
+    http_options=types.HttpOptions(timeout=30000)
+)
 CLIENT_ID = os.getenv("LINKEDIN_CLIENT_ID")
 CLIENT_SECRET = os.getenv("LINKEDIN_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("LINKEDIN_REDIRECT_URI")
@@ -130,31 +129,17 @@ def get_user_info(access_token: str):
 @app.post("/generate-image")
 async def generate_image(prompt: str = Form(...)):
     try:
-        # 1. Initialize the model
-        model = genai.GenerativeModel('gemini-2.0-flash-image-generation')
-        # 2. Generate content
-        response = model.generate_content(prompt)
-        print(response)
-        if response.parts:
-            for part in response.parts:
-                if part.inline_data:
-                    # Extract raw image bytes and mime type
-                    image_data = part.inline_data.data
-                    mime_type = part.inline_data.mime_type or "image/jpeg"
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image",
+            contents=[prompt],
+        )
 
-                    # 3. Determine file extension and unique name
-                    ext = "png" if "png" in mime_type else "jpg"
-                    filename = f"images/img_{uuid.uuid4()}.{ext}"
-
-                    # 4. Save to local disk
-                    with open(filename, "wb") as f:
-                        f.write(image_data)
-                    print(f"Image saved locally to: {filename}")
-
-                    # 5. Return image to the browser
-                    return Response(content=image_data, media_type=mime_type)
-
-        raise HTTPException(status_code=500, detail="No image data found in response.")
+        for part in response.parts:
+            if part.text is not None:
+                print(part.text)
+            elif part.inline_data is not None:
+                image = part.as_image()
+                image.save(f"images/img_gen_{uuid.uuid4()}.png")
 
     except Exception as e:
         print(f"Error: {e}")
