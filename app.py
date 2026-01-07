@@ -142,8 +142,6 @@ async def generate_image(prompt: str = Form(...)):
                 image = part.as_image()
                 image.save(imageName)
                 print("Image saved : ",imageName)
-
-
         return response
 
     except Exception as e:
