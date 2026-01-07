@@ -27,6 +27,38 @@ SCOPES = "openid profile email w_member_social"
 
 os.makedirs("images", exist_ok=True)
 
+
+
+
+
+
+def normalize_for_linkedin(text: str) -> str:
+    text = text.strip()
+
+    # Remove wrapping quotes
+    if text.startswith('"') and text.endswith('"'):
+        text = text[1:-1]
+
+    # Convert escaped newlines to real newlines
+    text = text.replace("\\n", "\n")
+
+    # Remove escaped bullets if any
+    text = text.replace("\\n•", "\n•")
+
+    return text
+
+
+
+
+
+
+
+
+
+
+
+
+
 @app.get("/")
 def read_root():
     return {"message": "LinkedIn Automator is running. Go to /login to authenticate."}
@@ -237,7 +269,8 @@ async def recentAINews():
             ,
             config=config
         )
-        return response.text.replace("\\n", "\n").replace("**", "").strip()
+        post = normalize_for_linkedin(response.text)
+        return post
     except Exception as e:
         print(f"Error: {e}")
 
