@@ -138,10 +138,13 @@ async def generate_image(prompt: str = Form(...)):
             if part.text is not None:
                 print(part.text)
             elif part.inline_data is not None:
+                imageName = f"images/img_gen_{uuid.uuid4()}.png"
                 image = part.as_image()
-                image.save(f"images/img_gen_{uuid.uuid4()}.png")
+                image.save(imageName)
+                print("Image saved : ",imageName)
 
-        return JSONResponse(response.json())
+
+        return response
 
     except Exception as e:
         print(f"Error: {e}")
