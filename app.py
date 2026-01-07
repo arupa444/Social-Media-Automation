@@ -3,7 +3,7 @@ import uuid
 import requests
 import urllib.parse
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -140,6 +140,8 @@ async def generate_image(prompt: str = Form(...)):
             elif part.inline_data is not None:
                 image = part.as_image()
                 image.save(f"images/img_gen_{uuid.uuid4()}.png")
+
+        return JSONResponse(response.json())
 
     except Exception as e:
         print(f"Error: {e}")
