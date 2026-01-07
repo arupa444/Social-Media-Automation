@@ -126,7 +126,7 @@ def get_user_info(access_token: str):
 
 
 
-@app.post("/generate-image")
+@app.post("/generate-image-with-your-prompt")
 async def generate_image(prompt: str = Form(...)):
 
     try:
@@ -147,6 +147,123 @@ async def generate_image(prompt: str = Form(...)):
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@app.post("/enhance-prompt")
+async def enhancePrompt(prompt: str = Form(...)):
+    try:
+
+        enhancedprompt = f"""
+        You are a professional visual prompt engineer specializing in text-to-image generation.
+
+        TASK:
+        Transform the user input into a highly detailed, vivid, and precise image-generation prompt optimized for Gemini image models.
+
+        RULES:
+        - Preserve the original intent, subject, and mood of the user prompt
+        - Do NOT add unrelated objects or concepts
+        - Expand descriptions using concrete visual details
+        - Be explicit about:
+          • subject appearance
+          • environment and background
+          • lighting conditions
+          • camera perspective / framing
+          • artistic style (if applicable)
+          • color palette
+          • realism level (photorealistic, cinematic, illustration, 3D, etc.)
+        - Avoid abstract language
+        - Avoid storytelling or explanations
+        - Output ONLY the enhanced image prompt (no headings, no bullet points)
+
+        STRUCTURE TO FOLLOW (implicit, do not label):
+        [Main subject description],
+        [environment & setting],
+        [lighting],
+        [camera angle / composition],
+        [style & quality keywords]
+
+        USER PROMPT:
+        {prompt}
+
+        OUTPUT:
+        A single, clean, detailed image-generation prompt suitable for a state-of-the-art image model.
+        """
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=enhancedprompt
+        )
+        return response.text
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+
+@app.post("/generate-image-with-enhanced-prompt")
+async def generate_image_enhanced(prompt: str = Form(...)):
+    try:
+
+        enhancedprompt = f"""
+        You are a professional visual prompt engineer specializing in text-to-image generation.
+
+        TASK:
+        Transform the user input into a highly detailed, vivid, and precise image-generation prompt optimized for Gemini image models.
+
+        RULES:
+        - Preserve the original intent, subject, and mood of the user prompt
+        - Do NOT add unrelated objects or concepts
+        - Expand descriptions using concrete visual details
+        - Be explicit about:
+          • subject appearance
+          • environment and background
+          • lighting conditions
+          • camera perspective / framing
+          • artistic style (if applicable)
+          • color palette
+          • realism level (photorealistic, cinematic, illustration, 3D, etc.)
+        - Avoid abstract language
+        - Avoid storytelling or explanations
+        - Output ONLY the enhanced image prompt (no headings, no bullet points)
+
+        STRUCTURE TO FOLLOW (implicit, do not label):
+        [Main subject description],
+        [environment & setting],
+        [lighting],
+        [camera angle / composition],
+        [style & quality keywords]
+
+        USER PROMPT:
+        {prompt}
+
+        OUTPUT:
+        A single, clean, detailed image-generation prompt suitable for a state-of-the-art image model.
+        """
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=enhancedprompt
+        )
+
+
+        response1 = client.models.generate_content(
+            model="gemini-2.5-flash-image",
+            contents=response.text,
+        )
+        for part in response1.parts:
+            if part.text is not None:
+                print(part.text)
+            elif part.inline_data is not None:
+                imageName = f"images/img_gen_{uuid.uuid4()}.png"
+                image = part.as_image()
+                image.save(imageName)
+                print("Image saved : ",imageName)
+        return response, response1
+
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.post("/post_image")
