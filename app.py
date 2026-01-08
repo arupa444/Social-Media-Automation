@@ -59,8 +59,8 @@ def contentGenarationThroughGemini(text: str) -> str:
         model="gemini-2.5-flash-lite",
         contents=text
     )
-    print(response)
-    return response
+    # print(response)
+    return response.text
 
 
 
