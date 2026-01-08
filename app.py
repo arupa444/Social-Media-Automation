@@ -507,4 +507,3 @@ async def post_image_with_information(
         "post_id": final_response.json().get("id"),
         "link": f"https://www.linkedin.com/feed/update/{final_response.json().get('id')}"
     }
-
