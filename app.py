@@ -29,7 +29,7 @@ os.makedirs("images", exist_ok=True)
 
 
 
-
+# all helper functions....
 
 
 def normalize_for_linkedin(text: str) -> str:
@@ -59,8 +59,8 @@ def contentGenarationThroughGemini(text: str) -> str:
         model="gemini-2.5-flash-lite",
         contents=text
     )
-    print(response)
-    return response
+    # print(response)
+    return response.text
 
 
 
