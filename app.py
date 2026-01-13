@@ -379,6 +379,7 @@ async def generate_image_enhanced(prompt: str = Form(...)):
         A single, clean, detailed image-generation prompt suitable for a state-of-the-art image model.
         """
 
+
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents=enhancedprompt
