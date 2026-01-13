@@ -29,7 +29,7 @@ os.makedirs("images", exist_ok=True)
 
 
 
-# all helper functions....
+# all utils functions....
 
 
 def normalize_for_linkedin(text: str) -> str:
